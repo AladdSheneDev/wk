@@ -1,3 +1,3 @@
-name = "asfetch"
+name = "remote-database"
 main = "index.js"
 compatibility_date = "2025-06-21"
