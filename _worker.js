@@ -1,48 +1,54 @@
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request));
-});
+const DATA_URL = "https://raw.githubusercontent.com/AladdSheneDev/RemDataJSON/main/remotes.json";
 
-const DATA_URL = 'https://raw.githubusercontent.com/AladdSheneDev/RemDataJSON/main/remotes.json';
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    const query = (url.searchParams.get("q") || "").trim().toUpperCase();
 
-async function handleRequest(request) {
-  const url = new URL(request.url);
-  const query = (url.searchParams.get('q') || '').trim().toUpperCase();
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      });
+    }
 
-  if (!query) {
-    return new Response(JSON.stringify({ success: false, message: 'Missing query parameter ?q=' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+    if (!query) {
+      return new Response(JSON.stringify({ success: false, message: "Missing query ?q=" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    }
 
-  let data;
-  try {
-    const res = await fetch(DATA_URL);
-    data = await res.json();
-  } catch (e) {
-    return new Response(JSON.stringify({ success: false, message: 'Failed to load remote data' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+    try {
+      const res = await fetch(DATA_URL);
+      const data = await res.json();
 
-  const results = data.filter(item =>
-    (item.model && item.model.toUpperCase().includes(query)) ||
-    (item.brand && item.brand.toUpperCase().includes(query)) ||
-    (item.remote_model && item.remote_model.toUpperCase().includes(query)) ||
-    (item.buy_link_name && item.buy_link_name.toUpperCase().includes(query)) ||
-    (item.buy_link_url && item.buy_link_url.toUpperCase().includes(query))
-  );
+      const matches = data.filter((item) =>
+        [item.model, item.brand, item.remote_model, item.buy_link_name, item.buy_link_url]
+          .filter(Boolean)
+          .some((val) => val.toUpperCase().includes(query))
+      );
 
-  if (results.length === 0) {
-    return new Response(JSON.stringify({ success: false, message: 'No remotes found matching "' + query + '"' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+      if (!matches.length) {
+        return new Response(JSON.stringify({ success: false, message: `No match for "${query}"` }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        });
+      }
 
-  return new Response(JSON.stringify({ success: true, data: results }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
-}
+      return new Response(JSON.stringify({ success: true, data: matches }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ success: false, message: "Failed to load JSON" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    }
+  },
+};
